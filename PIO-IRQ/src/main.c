@@ -63,9 +63,11 @@ void pisca_led(int n, int t);
  * !! Isso é um exemplo ruim, nao deve ser feito na pratica, !!
  * !! pois nao se deve usar delays dentro de interrupcoes    !!
  */
+
+volatile char flag_botao;
 void but_callback(void)
 {
-  pisca_led(5, 200);
+  flag_botao = 1;
 }
 
 /************************************************************************/
@@ -123,18 +125,25 @@ void io_init(void)
 // Funcao principal chamada na inicalizacao do uC.
 void main(void)
 {
+	
 	// Inicializa clock
 	sysclk_init();
 
 	// Desativa watchdog
 	WDT->WDT_MR = WDT_MR_WDDIS;
 
-  // configura botao com interrupcao
-  io_init();
+	  // configura botao com interrupcao
+	  io_init();
+	  int delay = 300;
 
 	// super loop
 	// aplicacoes embarcadas no devem sair do while(1).
 	while(1)
   {
+	if(flag_botao){
+		pisca_led(5,delay);
+		flag_botao=0;
+	  }
+	  pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 	}
 }
