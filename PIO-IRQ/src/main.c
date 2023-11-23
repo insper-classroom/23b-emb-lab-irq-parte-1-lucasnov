@@ -1,4 +1,4 @@
-/************************************************************************
+/************************
  * 5 semestre - Eng. da Computao - Insper
  * Rafael Corsi - rafael.corsi@insper.edu.br
  *
@@ -14,17 +14,17 @@
  *
  * Log:
  *  - 10/2018: Criação
- ************************************************************************/
+ ************************/
 
-/************************************************************************/
+/************************/
 /* includes                                                             */
-/************************************************************************/
+/************************/
 
 #include "asf.h"
 
-/************************************************************************/
+/************************/
 /* defines                                                              */
-/************************************************************************/
+/************************/
 
 // LED
 #define LED_PIO      PIOC
@@ -38,23 +38,22 @@
 #define BUT_IDX  11
 #define BUT_IDX_MASK (1 << BUT_IDX)
 
-/************************************************************************/
+/************************/
 /* constants                                                            */
-/************************************************************************/
+/************************/
 
-/************************************************************************/
+/************************/
 /* variaveis globais                                                    */
-/************************************************************************/
-
-/************************************************************************/
+/************************/
+/************************/
 /* prototype                                                            */
-/************************************************************************/
+/************************/
 void io_init(void);
 void pisca_led(int n, int t);
 
-/************************************************************************/
+/************************/
 /* handler / callbacks                                                  */
-/************************************************************************/
+/************************/
 
 /*
  * Exemplo de callback para o botao, sempre que acontecer
@@ -63,16 +62,17 @@ void pisca_led(int n, int t);
  * !! Isso é um exemplo ruim, nao deve ser feito na pratica, !!
  * !! pois nao se deve usar delays dentro de interrupcoes    !!
  */
+/* flag */
+volatile char but_flag; // (1)
 
-volatile char flag_botao;
-void but_callback(void)
-{
-  flag_botao = 1;
+/* funcao de callback/ Handler */
+void but_callback(void){
+	but_flag = 1;
 }
 
-/************************************************************************/
+/************************/
 /* funções                                                              */
-/************************************************************************/
+/************************/
 
 // pisca led N vez no periodo T
 void pisca_led(int n, int t){
@@ -97,7 +97,8 @@ void io_init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUT_PIO, PIO_INPUT, BUT_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
+	pio_set_debounce_filter(BUT_PIO, BUT_IDX_MASK, 60);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
@@ -105,7 +106,7 @@ void io_init(void)
   pio_handler_set(BUT_PIO,
                   BUT_PIO_ID,
                   BUT_IDX_MASK,
-                  PIO_IT_FALL_EDGE,
+                  PIO_IT_RISE_EDGE,
                   but_callback);
 
   // Ativa interrupção e limpa primeira IRQ gerada na ativacao
@@ -118,32 +119,31 @@ void io_init(void)
   NVIC_SetPriority(BUT_PIO_ID, 4); // Prioridade 4
 }
 
-/************************************************************************/
+/************************/
 /* Main                                                                 */
-/************************************************************************/
+/************************/
+
+
 
 // Funcao principal chamada na inicalizacao do uC.
 void main(void)
 {
-	
 	// Inicializa clock
 	sysclk_init();
 
 	// Desativa watchdog
 	WDT->WDT_MR = WDT_MR_WDDIS;
 
-	  // configura botao com interrupcao
-	  io_init();
-	  int delay = 300;
+  // configura botao com interrupcao
+  io_init();
 
 	// super loop
 	// aplicacoes embarcadas no devem sair do while(1).
-	while(1)
-  {
-	if(flag_botao){
-		pisca_led(5,delay);
-		flag_botao=0;
-	  }
-	  pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
+	while(1){
+	   if (but_flag) {  // (2)
+		   pisca_led(5, 200);
+		   but_flag = 0; // (3)
+	   }	
+	   pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
 	}
 }
